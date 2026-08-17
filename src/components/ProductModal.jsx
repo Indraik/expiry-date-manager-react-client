@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CameraScannerModal from './CameraScannerModal';
 
 const ProductModal = ({ isOpen, onClose, onSave, initialData = null, isLoading = false }) => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ const ProductModal = ({ isOpen, onClose, onSave, initialData = null, isLoading =
     notes: ''
   });
   const [error, setError] = useState('');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -48,6 +50,10 @@ const ProductModal = ({ isOpen, onClose, onSave, initialData = null, isLoading =
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleCameraScanSuccess = (scannedCode) => {
+    setFormData(prev => ({ ...prev, upcCode: scannedCode }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim()) {
@@ -72,60 +78,72 @@ const ProductModal = ({ isOpen, onClose, onSave, initialData = null, isLoading =
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 p-6 animate-scale-up">
-        <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
-          <h2 className="text-xl font-bold text-slate-900">
-            {initialData ? 'Edit Product' : 'Add New Product'}
-          </h2>
-          <button 
-            onClick={onClose} 
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">
-              Product Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="e.g. Whole Milk 1L, Organic Eggs"
-              required
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-900 outline-none"
-            />
+    <>
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 p-6 animate-scale-up">
+          <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
+            <h2 className="text-xl font-bold text-slate-900">
+              {initialData ? 'Edit Product' : 'Add New Product'}
+            </h2>
+            <button 
+              onClick={onClose} 
+              className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
-                UPC / Barcode
+                Product Title <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="upcCode"
-                  value={formData.upcCode}
-                  onChange={handleChange}
-                  placeholder="Scan or type barcode"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-900 outline-none"
-                />
-              </div>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="e.g. Whole Milk 1L, Organic Eggs"
+                required
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-900 outline-none"
+              />
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  UPC / Barcode
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    name="upcCode"
+                    value={formData.upcCode}
+                    onChange={handleChange}
+                    placeholder="Scan or type barcode"
+                    className="w-full pr-10 pl-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-900 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    title="Scan QR / Barcode with Camera"
+                    className="absolute right-2 p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
@@ -234,6 +252,13 @@ const ProductModal = ({ isOpen, onClose, onSave, initialData = null, isLoading =
         </form>
       </div>
     </div>
+
+    <CameraScannerModal
+      isOpen={isCameraOpen}
+      onClose={() => setIsCameraOpen(false)}
+      onScanSuccess={handleCameraScanSuccess}
+    />
+    </>
   );
 };
 
