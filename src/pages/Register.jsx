@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Clock, Mail, Lock, User, Eye, EyeOff, CheckCircle2, Sparkles, ShieldCheck, Bell } from 'lucide-react';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -13,36 +15,20 @@ const Register = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
     try {
       const response = await fetch('http://localhost:5001/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
-        let errorMessage = 'Registration failed. Please try again.';
-        if (data.error) {
-          errorMessage = data.error;
-        } else if (data.errors && data.errors.length > 0) {
-          errorMessage = data.errors[0].msg;
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-        throw new Error(errorMessage);
+        throw new Error(data.error || data.errors?.[0]?.msg || data.message || 'Registration failed.');
       }
-
-      // Store token and redirect if auto-login is supported
       if (data.token) {
         localStorage.setItem('token', data.token);
         navigate('/dashboard');
       } else {
-        // Otherwise redirect to login
         navigate('/login');
       }
     } catch (err) {
@@ -53,97 +39,128 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link to="/" className="flex justify-center items-center cursor-pointer mb-6">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-2xl shadow-md">
-            ED
+    <div className="auth-page">
+      {/* Left decorative panel */}
+      <aside className="auth-side" style={{ background: 'linear-gradient(145deg, #4f46e5 0%, #059669 100%)' }}>
+        <div className="auth-side-blob auth-side-blob-1" />
+        <div className="auth-side-blob auth-side-blob-2" />
+        <div className="auth-side-content">
+          <div className="auth-side-icon">
+            <Clock size={36} />
           </div>
-        </Link>
-        <h2 className="mt-2 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
-          Create a new account
-        </h2>
-        <p className="mt-2 text-center text-sm text-slate-600">
-          Or{' '}
-          <Link to="/login" className="font-medium text-primary hover:text-primary-dark transition-colors">
-            sign in to your existing account
-          </Link>
-        </p>
-      </div>
+          <h2>Start Tracking Today</h2>
+          <p>
+            Join thousands of users who never waste another product. Sign up free — no credit card needed.
+          </p>
+          <div className="auth-side-features">
+            <div className="auth-side-feat"><CheckCircle2 size={16} /> Free forever plan</div>
+            <div className="auth-side-feat"><Sparkles size={16} /> Instant barcode scanning</div>
+            <div className="auth-side-feat"><Bell size={16} /> Expiry alerts &amp; filters</div>
+            <div className="auth-side-feat"><ShieldCheck size={16} /> Secure JWT auth</div>
+          </div>
+        </div>
+      </aside>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-soft sm:rounded-2xl sm:px-10 border border-slate-100">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-            
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-700">
-                Full Name
-              </label>
-              <div className="mt-1">
+      {/* Right form area */}
+      <div className="auth-form-area">
+        <div className="auth-box">
+          <Link to="/" className="auth-logo">
+            <div className="auth-logo-icon">
+              <Clock size={22} />
+            </div>
+            <span className="auth-logo-text">Expiry<span>Manager</span></span>
+          </Link>
+
+          <h1 className="auth-heading">Create Account</h1>
+          <p className="auth-sub">
+            Already have an account? <Link to="/login">Sign in</Link>
+          </p>
+
+          {error && (
+            <div className="form-error" role="alert">
+              <ShieldCheck size={16} />
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-name">Full Name</label>
+              <div className="form-control-icon-wrap">
+                <User size={16} className="form-control-icon" />
                 <input
-                  id="name"
-                  name="name"
+                  id="reg-name"
                   type="text"
                   autoComplete="name"
                   required
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm transition-colors"
+                  onChange={e => setName(e.target.value)}
+                  className="form-control"
+                  placeholder="John Smith"
                 />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-                Email address
-              </label>
-              <div className="mt-1">
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-email">Email address</label>
+              <div className="form-control-icon-wrap">
+                <Mail size={16} className="form-control-icon" />
                 <input
-                  id="email"
-                  name="email"
+                  id="reg-email"
                   type="email"
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm transition-colors"
+                  onChange={e => setEmail(e.target.value)}
+                  className="form-control"
+                  placeholder="you@example.com"
                 />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                Password
-              </label>
-              <div className="mt-1">
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-password">Password</label>
+              <div className="form-control-icon-wrap" style={{ position: 'relative' }}>
+                <Lock size={16} className="form-control-icon" />
                 <input
-                  id="password"
-                  name="password"
-                  type="password"
+                  id="reg-password"
+                  type={showPw ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm transition-colors"
+                  onChange={e => setPassword(e.target.value)}
+                  className="form-control"
+                  placeholder="Min. 6 characters"
+                  style={{ paddingRight: '2.5rem' }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  style={{ position: 'absolute', right: '.8rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  tabIndex={-1}
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isLoading ? 'Creating account...' : 'Create account'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', padding: '.8rem', fontSize: '.95rem', marginTop: '.5rem' }}
+            >
+              {isLoading ? (
+                <><span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> Creating account...</>
+              ) : (
+                'Create Account'
+              )}
+            </button>
           </form>
+
+          <p className="auth-footer-text">
+            By creating an account you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>.
+          </p>
         </div>
       </div>
     </div>

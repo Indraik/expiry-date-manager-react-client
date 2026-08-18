@@ -1,29 +1,65 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Clock, LogOut, User, LayoutDashboard } from 'lucide-react';
 
-const Header = () => {
+const Header = ({ loggedIn = false }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('http://localhost:5001/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error('Logout error:', e);
+    } finally {
+      localStorage.removeItem('token');
+      navigate('/login');
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-soft">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex-shrink-0 flex items-center cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-xl shadow-md">
-              ED
-            </div>
-            <span className="ml-3 font-bold text-xl text-slate-800 tracking-tight">Expiry<span className="text-primary">Manager</span></span>
-          </Link>
-
-          {/* Navigation Links / Auth */}
-          <div className="flex items-center space-x-4">
-            <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">
-              Login
-            </Link>
-            <Link to="/register" className="btn-primary text-sm px-4 py-2">
-              Register
-            </Link>
-          </div>
+    <header className="navbar fade-in">
+      <Link to={loggedIn ? '/dashboard' : '/'} className="brand">
+        <div className="brand-icon">
+          <Clock size={20} />
         </div>
+        <span className="brand-text">ExpiryManager</span>
+      </Link>
+
+      <div className="nav-actions">
+        {loggedIn ? (
+          <>
+            <Link to="/dashboard" className="nav-item">
+              <LayoutDashboard size={16} />
+              Dashboard
+            </Link>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '.5rem',
+                padding: '.4rem .8rem',
+                borderRadius: 'var(--r-sm)',
+                background: 'var(--bg-subtle)',
+                border: '1px solid var(--border)',
+                fontSize: '.85rem',
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <User size={15} />
+              <span style={{ display: 'none' }} className="sm-show">My Account</span>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+              <LogOut size={15} />
+              Logout
+            </button>
+          </>
+        ) : (
+          <>
+            <Link to="/login" className="nav-item">Login</Link>
+            <Link to="/register" className="btn btn-primary btn-sm">Get Started</Link>
+          </>
+        )}
       </div>
     </header>
   );

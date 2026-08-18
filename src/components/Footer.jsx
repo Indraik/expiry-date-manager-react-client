@@ -1,48 +1,48 @@
 import React from 'react';
+import { Clock } from 'lucide-react';
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear();
-  
+  const year = new Date().getFullYear();
   return (
-    <footer className="bg-white border-t border-slate-100 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center cursor-pointer mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                ED
+    <footer className="footer">
+      <div className="footer-inner">
+        <div className="footer-top">
+          <div>
+            <div className="footer-brand">
+              <div className="footer-brand-icon">
+                <Clock size={18} />
               </div>
-              <span className="ml-2 font-bold text-lg text-slate-800 tracking-tight">Expiry<span className="text-primary">Manager</span></span>
+              <span className="footer-brand-name">ExpiryManager</span>
             </div>
-            <p className="text-slate-500 text-sm max-w-sm">
-              The smartest way to manage your inventory, track expiration dates, and reduce waste in your home or business.
+            <p className="footer-desc">
+              The smartest way to manage your inventory, track expiration dates, and reduce waste — at home or in your business.
             </p>
           </div>
-          
-          <div>
-            <h4 className="font-semibold text-slate-900 mb-4">Product</h4>
-            <ul className="space-y-2 text-sm text-slate-500">
-              <li><a href="#" className="hover:text-primary transition-colors">Features</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Pricing</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Security</a></li>
+
+          <div className="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#">Features</a></li>
+              <li><a href="#">Pricing</a></li>
+              <li><a href="#">Security</a></li>
             </ul>
           </div>
-          
-          <div>
-            <h4 className="font-semibold text-slate-900 mb-4">Company</h4>
-            <ul className="space-y-2 text-sm text-slate-500">
-              <li><a href="#" className="hover:text-primary transition-colors">About</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Contact</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Privacy Policy</a></li>
+
+          <div className="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#">About</a></li>
+              <li><a href="#">Contact</a></li>
+              <li><a href="#">Privacy Policy</a></li>
             </ul>
           </div>
         </div>
-        
-        <div className="border-t border-slate-100 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-400">
-          <p>&copy; {currentYear} ExpiryManager. All rights reserved.</p>
-          <div className="flex space-x-4 mt-4 md:mt-0">
-            <a href="#" className="hover:text-slate-600 transition-colors">Twitter</a>
-            <a href="#" className="hover:text-slate-600 transition-colors">GitHub</a>
+
+        <div className="footer-bottom">
+          <span>&copy; {year} ExpiryManager. All rights reserved.</span>
+          <div className="footer-socials">
+            <a href="#">Twitter</a>
+            <a href="#">GitHub</a>
           </div>
         </div>
       </div>

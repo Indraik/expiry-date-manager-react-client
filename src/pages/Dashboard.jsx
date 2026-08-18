@@ -1,34 +1,73 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Plus, Search, CheckCircle2, AlertTriangle, XCircle, Package,
+  Trash2, Pencil, ChevronLeft, ChevronRight, Loader2, AlertCircle,
+  Barcode, Filter, RotateCcw, X
+} from 'lucide-react';
 import LoggedInHeader from '../components/LoggedInHeader';
 import Footer from '../components/Footer';
 import ProductModal from '../components/ProductModal';
-import SearchFilterBar from '../components/SearchFilterBar';
-import PaginationControls from '../components/PaginationControls';
 import { fetchProductsApi, createProductApi, updateProductApi, deleteProductApi } from '../services/api';
 
+/* ── helpers ── */
+const getItemStatus = (dateStr) => {
+  if (!dateStr) return { cls: 'fresh', label: 'Fresh', daysLeft: 99 };
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const exp   = new Date(dateStr); exp.setHours(0, 0, 0, 0);
+  const days  = Math.ceil((exp - today) / 86400000);
+  if (days < 0)  return { cls: 'expired', label: 'Expired',       daysLeft: days };
+  if (days <= 7) return { cls: 'warning', label: 'Expiring Soon', daysLeft: days };
+  return          { cls: 'fresh',   label: 'Fresh',          daysLeft: days };
+};
+
+const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+const StatusBadge = ({ status, expiryDate }) => {
+  const { cls, label } = getItemStatus(expiryDate);
+  return (
+    <span className={`badge ${cls}`}>
+      <span className="badge-dot" />
+      {label} · {fmtDate(expiryDate)}
+    </span>
+  );
+};
+
+/* ── Component ── */
 const Dashboard = () => {
-  const [products, setProducts] = useState([]);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [products,      setProducts]      = useState([]);
+  const [pagination,    setPagination]    = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
+  const [isLoading,     setIsLoading]     = useState(true);
+  const [error,         setError]         = useState('');
 
-  // Filters state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [expiryFilter, setExpiryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  // Search & filters
+  const [searchInput,   setSearchInput]   = useState('');
+  const [searchTerm,    setSearchTerm]    = useState('');
+  const [expiryFilter,  setExpiryFilter]  = useState('');
+  const [statusFilter,  setStatusFilter]  = useState('');
+  const [currentPage,   setCurrentPage]   = useState(1);
 
-  // Modal & Edit State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  // Modal
+  const [isModalOpen,   setIsModalOpen]   = useState(false);
+  const [editingProduct,setEditingProduct]= useState(null);
+  const [isSaving,      setIsSaving]      = useState(false);
+  const [deletingId,    setDeletingId]    = useState(null);
+
+  const debounceRef = useRef(null);
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchInput]);
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
-      // Determine if search input looks like a UPC code (all digits) or title
       const isUpc = /^\d+$/.test(searchTerm.trim());
       const data = await fetchProductsApi({
         page: currentPage,
@@ -36,7 +75,7 @@ const Dashboard = () => {
         search: isUpc ? '' : searchTerm.trim(),
         upc: isUpc ? searchTerm.trim() : '',
         expiryWithinMonths: expiryFilter,
-        status: statusFilter
+        status: statusFilter,
       });
       setProducts(data.products || []);
       setPagination(data.pagination || { page: 1, limit: 20, total: 0, totalPages: 1 });
@@ -47,50 +86,32 @@ const Dashboard = () => {
     }
   }, [currentPage, searchTerm, expiryFilter, statusFilter]);
 
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+  useEffect(() => { loadProducts(); }, [loadProducts]);
 
-  const handleSearchChange = (term) => {
-    setSearchTerm(term);
-    setCurrentPage(1);
-  };
+  // Metrics derived from current page's products
+  const total   = pagination.total;
+  const expired = products.filter(p => getItemStatus(p.expiryDate).cls === 'expired').length;
+  const warning = products.filter(p => getItemStatus(p.expiryDate).cls === 'warning').length;
+  const fresh   = products.filter(p => getItemStatus(p.expiryDate).cls === 'fresh').length;
 
-  const handleExpiryFilterChange = (filterVal) => {
-    setExpiryFilter(filterVal);
-    setCurrentPage(1);
-  };
+  const hasFilters = searchTerm || expiryFilter || statusFilter;
 
-  const handleStatusFilterChange = (statusVal) => {
-    setStatusFilter(statusVal);
-    setCurrentPage(1);
-  };
-
-  const handleResetFilters = () => {
+  const handleReset = () => {
+    setSearchInput('');
     setSearchTerm('');
     setExpiryFilter('');
     setStatusFilter('');
     setCurrentPage(1);
   };
 
-  const handleOpenAddModal = () => {
-    setEditingProduct(null);
-    setIsModalOpen(true);
-  };
+  const openAdd = () => { setEditingProduct(null); setIsModalOpen(true); };
+  const openEdit = (p) => { setEditingProduct(p); setIsModalOpen(true); };
 
-  const handleOpenEditModal = (product) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
-  };
-
-  const handleSaveProduct = async (productData) => {
+  const handleSave = async (productData) => {
     setIsSaving(true);
     try {
-      if (editingProduct) {
-        await updateProductApi(editingProduct._id, productData);
-      } else {
-        await createProductApi(productData);
-      }
+      if (editingProduct) await updateProductApi(editingProduct._id, productData);
+      else await createProductApi(productData);
       setIsModalOpen(false);
       setEditingProduct(null);
       await loadProducts();
@@ -101,185 +122,195 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteProduct = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-    setDeletingId(productId);
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this product?')) return;
+    setDeletingId(id);
     try {
-      await deleteProductApi(productId);
+      await deleteProductApi(id);
       await loadProducts();
     } catch (err) {
-      alert(err.message || 'Failed to delete product');
+      alert(err.message || 'Failed to delete');
     } finally {
       setDeletingId(null);
     }
   };
 
-  const getStatusBadge = (status, expiryDate) => {
-    const dateObj = new Date(expiryDate);
-    const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-    if (status === 'Expired') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
-          <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-          Expired ({formattedDate})
-        </span>
-      );
-    } else if (status === 'Expiring Soon') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-          <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-amber-500"></span>
-          Expiring Soon ({formattedDate})
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-          <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-500"></span>
-          Good ({formattedDate})
-        </span>
-      );
-    }
-  };
+  /* Pagination helpers */
+  const { page, totalPages } = pagination;
+  const startItem = (page - 1) * 20 + 1;
+  const endItem   = Math.min(page * 20, total);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="dashboard-layout">
       <LoggedInHeader />
-      
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Header Title Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-            <p className="text-slate-500 text-sm mt-1">Manage your inventory and track upcoming product expiration dates.</p>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleOpenAddModal}
-              className="btn-primary flex items-center shadow-primary/25 shadow-md text-sm py-2.5 px-4 rounded-xl"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
-              </svg>
-              Add Product
-            </button>
+      <main className="dashboard-main">
+
+        {/* ── Header ── */}
+        <div className="dash-header fade-in">
+          <div>
+            <h1 className="dash-title">Dashboard</h1>
+            <p className="dash-sub">Manage your inventory and track upcoming product expiration dates.</p>
+          </div>
+          <button className="btn btn-primary" onClick={openAdd}>
+            <Plus size={17} /> Add Product
+          </button>
+        </div>
+
+        {/* ── Metric cards ── */}
+        <div className="metrics-grid">
+          <div className="metric-card" style={{ '--i': 0, animationDelay: '0ms' }}>
+            <div className="metric-icon blue"><Package size={22} /></div>
+            <div className="metric-info">
+              <div className="metric-value">{isLoading ? '—' : total}</div>
+              <div className="metric-label">Total Products</div>
+            </div>
+          </div>
+          <div className="metric-card" style={{ animationDelay: '60ms' }}>
+            <div className="metric-icon green"><CheckCircle2 size={22} /></div>
+            <div className="metric-info">
+              <div className="metric-value">{isLoading ? '—' : fresh}</div>
+              <div className="metric-label">Fresh</div>
+            </div>
+          </div>
+          <div className="metric-card" style={{ animationDelay: '120ms' }}>
+            <div className="metric-icon amber"><AlertTriangle size={22} /></div>
+            <div className="metric-info">
+              <div className="metric-value">{isLoading ? '—' : warning}</div>
+              <div className="metric-label">Expiring Soon</div>
+            </div>
+          </div>
+          <div className="metric-card" style={{ animationDelay: '180ms' }}>
+            <div className="metric-icon red"><XCircle size={22} /></div>
+            <div className="metric-info">
+              <div className="metric-value">{isLoading ? '—' : expired}</div>
+              <div className="metric-label">Expired</div>
+            </div>
           </div>
         </div>
 
-        {/* Search and Filters Bar */}
-        <SearchFilterBar
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
-          expiryFilter={expiryFilter}
-          onExpiryFilterChange={handleExpiryFilterChange}
-          statusFilter={statusFilter}
-          onStatusFilterChange={handleStatusFilterChange}
-          onResetFilters={handleResetFilters}
-        />
-
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={loadProducts} className="underline hover:text-red-900">Retry</button>
-          </div>
-        )}
-
-        {/* Product List Content */}
-        {isLoading ? (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-sm">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-3"></div>
-            <p className="text-slate-500 font-medium text-sm">Loading inventory products...</p>
-          </div>
-        ) : products.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-12 text-center">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-              </svg>
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
-              {searchTerm || expiryFilter || statusFilter ? 'No matching products found' : 'No products yet'}
-            </h3>
-            <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">
-              {searchTerm || expiryFilter || statusFilter 
-                ? 'Try adjusting your search keywords or range filters.' 
-                : 'Get started by adding a product to track its expiration date.'}
-            </p>
-            {searchTerm || expiryFilter || statusFilter ? (
-              <button onClick={handleResetFilters} className="btn-secondary text-sm px-4 py-2">
-                Clear Filters
-              </button>
-            ) : (
-              <button onClick={handleOpenAddModal} className="btn-primary text-sm px-4 py-2">
-                Add Your First Product
+        {/* ── Search / Filter bar ── */}
+        <div className="filter-bar">
+          <div className="search-wrap">
+            <Search size={16} className="search-icon" />
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search by title or UPC barcode..."
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+            />
+            {searchInput && (
+              <button className="search-clear" onClick={() => setSearchInput('')} title="Clear">
+                <X size={14} />
               </button>
             )}
           </div>
+
+          <select
+            className="filter-select"
+            value={expiryFilter}
+            onChange={e => { setExpiryFilter(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="">Expiry Range (All)</option>
+            <option value="1">Within 1 Month</option>
+            <option value="3">Within 3 Months</option>
+            <option value="6">Within 6 Months</option>
+          </select>
+
+          <select
+            className="filter-select"
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="">Status (All)</option>
+            <option value="Expiring Soon">Expiring Soon</option>
+            <option value="Expired">Expired</option>
+          </select>
+
+          {hasFilters && (
+            <button className="reset-btn" onClick={handleReset}>
+              <RotateCcw size={13} /> Reset
+            </button>
+          )}
+        </div>
+
+        {/* ── Error ── */}
+        {error && (
+          <div className="error-bar">
+            <span style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+              <AlertCircle size={16} /> {error}
+            </span>
+            <button onClick={loadProducts} style={{ fontWeight: 600, color: 'inherit', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+          </div>
+        )}
+
+        {/* ── Content ── */}
+        {isLoading ? (
+          <div className="loading-box">
+            <div className="spinner" style={{ margin: '0 auto' }} />
+            <p>Loading inventory...</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon"><Package size={32} /></div>
+            <h3>{hasFilters ? 'No matching products' : 'No products yet'}</h3>
+            <p>
+              {hasFilters
+                ? 'Try adjusting your search or filters.'
+                : 'Get started by adding your first product to track its expiration date.'}
+            </p>
+            {hasFilters
+              ? <button className="btn btn-secondary btn-sm" onClick={handleReset}>Clear Filters</button>
+              : <button className="btn btn-primary btn-sm" onClick={openAdd}><Plus size={15} /> Add First Product</button>}
+          </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+          <div className="table-card">
+            <div className="table-wrap">
+              <table className="product-table">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="py-3.5 px-4 sm:px-6">Product Title</th>
-                    <th className="py-3.5 px-4">Category</th>
-                    <th className="py-3.5 px-4">Quantity</th>
-                    <th className="py-3.5 px-4">UPC Barcode</th>
-                    <th className="py-3.5 px-4">Expiry Status</th>
-                    <th className="py-3.5 px-4 text-right pr-6">Actions</th>
+                  <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Qty</th>
+                    <th><Barcode size={13} style={{ display: 'inline', marginRight: 4 }} />UPC</th>
+                    <th><Filter size={13} style={{ display: 'inline', marginRight: 4 }} />Status</th>
+                    <th style={{ textAlign: 'right', paddingRight: '1.25rem' }}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {products.map((item) => (
-                    <tr key={item._id} className="hover:bg-slate-50/60 transition-colors group">
-                      <td className="py-4 px-4 sm:px-6 font-semibold text-slate-900">
-                        <div>{item.title}</div>
-                        {item.notes && (
-                          <div className="text-xs text-slate-400 font-normal mt-0.5">{item.notes}</div>
-                        )}
+                <tbody>
+                  {products.map(item => (
+                    <tr key={item._id}>
+                      <td>
+                        <div className="td-title">{item.title}</div>
+                        {item.notes && <div className="td-notes">{item.notes}</div>}
                       </td>
-
-                      <td className="py-4 px-4">
-                        <span className="inline-block px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">
-                          {item.category || 'General'}
-                        </span>
+                      <td><span className="cat-badge">{item.category || 'General'}</span></td>
+                      <td className="td-qty">{item.amount}<span>{item.unit || 'pcs'}</span></td>
+                      <td>
+                        {item.upcCode
+                          ? <span className="upc-code">{item.upcCode}</span>
+                          : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>
-
-                      <td className="py-4 px-4 font-medium text-slate-700">
-                        {item.amount} <span className="text-xs text-slate-400">{item.unit || 'pcs'}</span>
-                      </td>
-
-                      <td className="py-4 px-4 text-xs font-mono text-slate-500">
-                        {item.upcCode ? (
-                          <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-600">
-                            {item.upcCode}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-4 px-4">
-                        {getStatusBadge(item.status, item.expiryDate)}
-                      </td>
-
-                      <td className="py-4 px-4 text-right pr-6 space-x-2 whitespace-nowrap">
+                      <td><StatusBadge status={item.status} expiryDate={item.expiryDate} /></td>
+                      <td style={{ textAlign: 'right', paddingRight: '1.25rem', whiteSpace: 'nowrap' }}>
                         <button
-                          onClick={() => handleOpenEditModal(item)}
-                          className="px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                          className="action-btn action-edit"
+                          onClick={() => openEdit(item)}
+                          title="Edit"
                         >
-                          Edit
+                          <Pencil size={14} /> Edit
                         </button>
-
                         <button
-                          onClick={() => handleDeleteProduct(item._id)}
+                          className="action-btn action-delete"
+                          onClick={() => handleDelete(item._id)}
                           disabled={deletingId === item._id}
-                          className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Delete"
+                          style={{ marginLeft: '.25rem' }}
                         >
-                          {deletingId === item._id ? 'Deleting...' : 'Delete'}
+                          {deletingId === item._id
+                            ? <><Loader2 size={14} className="spin" /> Deleting</>
+                            : <><Trash2 size={14} /> Delete</>}
                         </button>
                       </td>
                     </tr>
@@ -288,23 +319,50 @@ const Dashboard = () => {
               </table>
             </div>
 
-            {/* Pagination Component */}
-            <PaginationControls
-              currentPage={pagination.page}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.total}
-              limit={pagination.limit}
-              onPageChange={(page) => setCurrentPage(page)}
-            />
+            {/* Pagination */}
+            <div className="pagination">
+              <span className="page-info">
+                {total > 0 ? `Showing ${startItem}–${endItem} of ${total} products` : `${total} products`}
+              </span>
+              <div className="page-controls">
+                <button
+                  className="page-btn"
+                  onClick={() => setCurrentPage(p => p - 1)}
+                  disabled={page <= 1}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  const pg = i + 1;
+                  return (
+                    <button
+                      key={pg}
+                      className={`page-btn ${pg === page ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(pg)}
+                    >
+                      {pg}
+                    </button>
+                  );
+                })}
+
+                <button
+                  className="page-btn"
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  disabled={page >= totalPages}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         )}
-
       </main>
 
       <ProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveProduct}
+        onSave={handleSave}
         initialData={editingProduct}
         isLoading={isSaving}
       />

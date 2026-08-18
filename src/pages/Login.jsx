@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Clock, Mail, Lock, Eye, EyeOff, CheckCircle2, Sparkles, ShieldCheck, Bell } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -12,37 +14,18 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
     try {
-      // Typically, this points to process.env.VITE_API_URL or similar.
-      // Assuming server runs on standard port or relative path in production
       const response = await fetch('http://localhost:5001/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
-        let errorMessage = 'Login failed. Please check your credentials.';
-        if (data.error) {
-          errorMessage = data.error;
-        } else if (data.errors && data.errors.length > 0) {
-          errorMessage = data.errors[0].msg;
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-        throw new Error(errorMessage);
+        throw new Error(data.error || data.errors?.[0]?.msg || data.message || 'Login failed.');
       }
-
-      // Store token and redirect
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-      navigate('/dashboard'); // Example redirect
+      if (data.token) localStorage.setItem('token', data.token);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -51,99 +34,115 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link to="/" className="flex justify-center items-center cursor-pointer mb-6">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-2xl shadow-md">
-            ED
+    <div className="auth-page">
+      {/* Left decorative panel */}
+      <aside className="auth-side">
+        <div className="auth-side-blob auth-side-blob-1" />
+        <div className="auth-side-blob auth-side-blob-2" />
+        <div className="auth-side-content">
+          <div className="auth-side-icon">
+            <Clock size={36} />
           </div>
-        </Link>
-        <h2 className="mt-2 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
-          Sign in to your account
-        </h2>
-        <p className="mt-2 text-center text-sm text-slate-600">
-          Or{' '}
-          <Link to="/register" className="font-medium text-primary hover:text-primary-dark transition-colors">
-            create a new account
-          </Link>
-        </p>
-      </div>
+          <h2>Welcome Back!</h2>
+          <p>
+            Track your expiry dates, reduce waste, and stay on top of your inventory — all in one place.
+          </p>
+          <div className="auth-side-features">
+            <div className="auth-side-feat"><CheckCircle2 size={16} /> Barcode & QR scanning</div>
+            <div className="auth-side-feat"><Sparkles size={16} /> Smart expiry status badges</div>
+            <div className="auth-side-feat"><Bell size={16} /> Expiry filter &amp; date range alerts</div>
+            <div className="auth-side-feat"><ShieldCheck size={16} /> Secure JWT authentication</div>
+          </div>
+        </div>
+      </aside>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-soft sm:rounded-2xl sm:px-10 border border-slate-100">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-            
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-                Email address
-              </label>
-              <div className="mt-1">
+      {/* Right form area */}
+      <div className="auth-form-area">
+        <div className="auth-box">
+          <Link to="/" className="auth-logo">
+            <div className="auth-logo-icon">
+              <Clock size={22} />
+            </div>
+            <span className="auth-logo-text">Expiry<span>Manager</span></span>
+          </Link>
+
+          <h1 className="auth-heading">Sign In</h1>
+          <p className="auth-sub">
+            Don't have an account? <Link to="/register">Create one free</Link>
+          </p>
+
+          {error && (
+            <div className="form-error" role="alert">
+              <ShieldCheck size={16} />
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-email">Email address</label>
+              <div className="form-control-icon-wrap">
+                <Mail size={16} className="form-control-icon" />
                 <input
-                  id="email"
-                  name="email"
+                  id="login-email"
                   type="email"
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm transition-colors"
+                  onChange={e => setEmail(e.target.value)}
+                  className="form-control"
+                  placeholder="you@example.com"
                 />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                Password
-              </label>
-              <div className="mt-1">
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-password">Password</label>
+              <div className="form-control-icon-wrap" style={{ position: 'relative' }}>
+                <Lock size={16} className="form-control-icon" />
                 <input
-                  id="password"
-                  name="password"
-                  type="password"
+                  id="login-password"
+                  type={showPw ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm transition-colors"
+                  onChange={e => setPassword(e.target.value)}
+                  className="form-control"
+                  placeholder="••••••••"
+                  style={{ paddingRight: '2.5rem' }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  style={{ position: 'absolute', right: '.8rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', padding: '.2rem', background: 'none', border: 'none', cursor: 'pointer' }}
+                  tabIndex={-1}
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-900">
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-sm">
-                <a href="#" className="font-medium text-primary hover:text-primary-dark">
-                  Forgot your password?
-                </a>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
+              <a href="#" style={{ fontSize: '.82rem', color: 'var(--accent)', fontWeight: 600 }}>Forgot password?</a>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isLoading ? 'Signing in...' : 'Sign in'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', padding: '.8rem', fontSize: '.95rem' }}
+            >
+              {isLoading ? (
+                <><span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> Signing in...</>
+              ) : (
+                'Sign In'
+              )}
+            </button>
           </form>
+
+          <p className="auth-footer-text">
+            By signing in, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
+          </p>
         </div>
       </div>
     </div>
